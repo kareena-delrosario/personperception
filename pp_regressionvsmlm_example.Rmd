@@ -1,0 +1,104 @@
+---
+title: "pp_introtomlm_regvsmlm"
+author: "Kareena del Rosario"
+date: "2024-01-26"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+# Set seed for reproducibility
+set.seed(0)
+
+# Parameters
+num_classes <- 10
+students_per_class <- 20
+total_students <- num_classes * students_per_class
+
+# Generate Class IDs
+class_ids <- rep(1:num_classes, each = students_per_class)
+
+# Generate Study Hours
+# Random study hours for all students
+study_hours <- rnorm(total_students, mean = 5, sd = 2)
+
+# Random class effect and individual error
+class_effect <- rep(rnorm(num_classes, mean = 0, sd = 3), each = students_per_class)
+individual_error <- rnorm(total_students, mean = 0, sd = 5)
+
+# Calculate Test Scores
+# Regular classes: Higher grades for more study hours
+# Honors classes: Similar grades regardless of study hours
+test_scores <- ifelse(class_ids <= 5,
+                      50 + 1 * study_hours + class_effect + individual_error,  # Honors classes
+                      50 + 3 * study_hours + class_effect + individual_error)  # Regular classes
+
+# Create ClassType variable
+class_type <- ifelse(class_ids <= 5, "Honors", "Regular")
+
+# Combine into a data frame
+df <- data.frame(ClassID = class_ids, StudyHours = study_hours, TestScore = test_scores, ClassType = class_type)
+
+# View the first few rows of the dataframe
+head(df)
+
+```
+
+
+```{r}
+# Assuming your data frame is named df
+
+# Linear Regression
+linear_model <- lm(TestScore ~ StudyHours, data = df)
+
+# Summary of the model
+summary(linear_model)
+
+```
+```{r}
+
+scatter_lm <- ggplot(df, aes(TestScore, StudyHours))
+
+scatter_lm <- scatter_lm + geom_smooth(method = "lm", se = FALSE, alpha = 0.1) + 
+  labs(x = "Test Score", y = "Study Hours") +
+  theme_classic() + 
+  theme(legend.position = "none")
+
+scatter_lm
+```
+```{r}
+
+library(lme4)
+library(afex) # gives p-value with summary
+
+# Multilevel Model
+mlm_model <- lmer(TestScore ~ StudyHours*ClassType + (1 | ClassType), data = df)
+
+# Summary of the model
+summary(mlm_model)
+
+anova(mlm_model)
+
+# Multilevel Model
+mlm_model <- lmer(TestScore ~ StudyHours + (1 | ClassID), data = df)
+
+# Summary of the model
+summary(mlm_model)
+```
+
+```{r}
+
+scatter <- ggplot(df, aes(TestScore, StudyHours, colour = as.factor(ClassID)))
+
+scatter2 <- scatter + geom_smooth(method = "lm", se = FALSE, aes(fill = as.factor(ClassID)), alpha = 0.1) + 
+  labs(x = "Test Score", y = "Study Hours", colour = "Class") +
+  theme_classic() + 
+  theme(legend.position = "none")
+
+scatter2
+```
+
